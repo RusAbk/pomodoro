@@ -32,11 +32,22 @@ jobs:
       - name: Build web release
         run: flutter build web --release --base-href="/pomodoro/"
 
-      - name: Deploy to gh-pages branch
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          # prefer a user PAT stored in GH_PAGES_PAT (add if needed), otherwise fall back to the workflow token
-          github_token: ${{ secrets.GH_PAGES_PAT || secrets.GITHUB_TOKEN }}
-          publish_dir: ./build/web
-          publish_branch: gh-pages
-          keep_files: false
+      - name: Deploy to `docs/` on main (alternative)
+        if: always()
+        run: |
+          set -e
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Prepare a temporary branch and copy build output into docs/
+          git fetch origin main
+          git checkout main
+          rm -rf docs || true
+          mkdir -p docs
+          cp -r build/web/* docs/
+
+          # Commit and push docs/ to main
+          git add docs
+          git commit -m "chore(ci): update docs (web build)" || echo "No changes to commit"
+          git push origin main
