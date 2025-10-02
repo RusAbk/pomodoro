@@ -35,13 +35,13 @@ class MyApp extends StatelessWidget {
       ),
       
       // Card Theme
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         clipBehavior: Clip.antiAlias,
-      ),
+      ) as CardThemeData?,
       
       // Button Themes
       filledButtonTheme: FilledButtonThemeData(
@@ -110,13 +110,13 @@ class MyApp extends StatelessWidget {
       ),
       
       // Card Theme
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         clipBehavior: Clip.antiAlias,
-      ),
+      ) as CardThemeData?,
       
       // Button Themes
       filledButtonTheme: FilledButtonThemeData(
