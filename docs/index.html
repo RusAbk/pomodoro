@@ -1,99 +1,43 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🍅 Pomodoro Timer - Coming Soon</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-        }
-        .container {
-            text-align: center;
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        p {
-            font-size: 1.2rem;
-            margin-bottom: 2rem;
-            opacity: 0.9;
-        }
-        .spinner {
-            width: 40px;
-            height: 40px;
-            margin: 20px auto;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid white;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .link {
-            color: #ffd700;
-            text-decoration: none;
-            font-weight: bold;
-        }
-        .link:hover {
-            text-decoration: underline;
-        }
-    </style>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="/pomodoro/">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Beautiful Pomodoro Timer for productivity">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Pomodoro Timer">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  
+  <!-- Theme color for browser UI -->
+  <meta name="theme-color" content="#6366F1">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>flutter_application_1</title>
+  <link rel="manifest" href="manifest.json">
 </head>
 <body>
-    <div class="container">
-        <h1>🍅 Pomodoro Timer</h1>
-        <p>Красивый таймер для продуктивности строится...</p>
-        <div class="spinner"></div>
-        <p>
-            <small>
-                Следите за прогрессом: 
-                <a href="https://github.com/RusAbk/pomodoro/actions" class="link" target="_blank">
-                    GitHub Actions
-                </a>
-            </small>
-        </p>
-        <p>
-            <small>
-                Исходный код: 
-                <a href="https://github.com/RusAbk/pomodoro" class="link" target="_blank">
-                    GitHub Repository
-                </a>
-            </small>
-        </p>
-    </div>
-
-    <script>
-        // Проверяем каждые 30 секунд, готово ли приложение
-        setInterval(() => {
-            fetch('./flutter.js')
-                .then(() => {
-                    // Если flutter.js найден, перезагружаем страницу
-                    window.location.reload();
-                })
-                .catch(() => {
-                    // Приложение еще не готово
-                    console.log('Flutter app not ready yet...');
-                });
-        }, 30000);
-    </script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
