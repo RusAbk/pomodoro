@@ -74,6 +74,19 @@ workflows:
         script: |
           # Produce an unsigned IPA artifact so it's downloadable as .ipa
           flutter build ipa --release --no-codesign || flutter build ios --release --no-codesign
+      - name: Collect build outputs (diagnostic)
+        script: |
+          echo "PWD: $(pwd)"
+          echo "Listing top-level build folder"
+          ls -la build || true
+          echo "Listing build/ios folder"
+          ls -la build/ios || true
+          echo "Listing build/ios/ipa folder"
+          ls -la build/ios/ipa || true
+          echo "Find any .ipa files"
+          find build -type f -name '*.ipa' -print || true
+          echo "Find any .app folders"
+          find build -type d -name '*.app' -print || true
     artifacts:
       # Prefer IPA artifact (if produced). Note: unsigned IPA cannot be installed on device without signing.
       - build/ios/ipa/*.ipa
