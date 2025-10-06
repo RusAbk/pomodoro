@@ -3,8 +3,8 @@ workflows:
     name: iOS Workflow
     max_build_duration: 60
     instance_type: mac_mini_m1
-    integrations:
-      app_store_connect: codemagic
+    # integrations:
+    #   app_store_connect: codemagic
     environment:
       flutter: stable
       xcode: latest
@@ -75,8 +75,8 @@ workflows:
     name: iOS Release
     max_build_duration: 120
     instance_type: mac_mini_m1
-    integrations:
-      app_store_connect: codemagic
+    # integrations:
+    #   app_store_connect: codemagic
     environment:
       flutter: stable
       xcode: latest
@@ -95,32 +95,23 @@ workflows:
     scripts:
       - name: Set up keychain
         script: |
-          keychain initialize
-      - name: Fetch signing files
+          # initialize keychain (no App Store Connect integration required)
+          keychain initialize || true
+      # Skipping automatic fetch of signing files so build can run without App Store Connect
+      - name: Prepare code signing (skipped automatic fetch)
         script: |
-          app-store-connect fetch-signing-files $BUNDLE_ID --type IOS_APP_STORE --create
-      - name: Use system default keychain
-        script: |
-          keychain add-certificates
-      - name: Set up code signing settings on Xcode project
-        script: |
-          xcode-project use-profiles
+          echo "Skipping app-store-connect signing fetch. Ensure you have required signing files if you need a signed IPA."
       - name: Get Flutter packages
         script: |
           flutter packages pub get
       - name: Install pods
         script: |
           find . -name "Podfile" -execdir pod install \;
-      - name: Flutter build ipa
+      - name: Flutter build ipa (unsigned)
         script: |
-          flutter build ipa --release
+          # Build unsigned IPA so Codemagic can produce an artifact without App Store Connect
+          flutter build ipa --release --no-codesign || flutter build ios --release --no-codesign
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: true
-        beta_groups:
-          - App Store Connect Users
-        submit_to_app_store: false
+    # Publishing to App Store Connect is disabled in this config to avoid missing integration errors.
