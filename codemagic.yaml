@@ -32,15 +32,20 @@ workflows:
       - name: Set up debug keystore
         script: |
           set -ex
-          keytool -genkeypair \
-            -alias androiddebugkey \
-            -keypass android \
-            -keystore ~/.android/debug.keystore \
-            -storepass android \
-            -dname 'CN=Android Debug,O=Android,C=US' \
-            -keyalg 'RSA' \
-            -keysize 2048 \
-            -validity 10000
+          mkdir -p ~/.android
+          if [ -f ~/.android/debug.keystore ]; then
+            echo "Debug keystore already exists, skipping generation"
+          else
+            keytool -genkeypair \
+              -alias androiddebugkey \
+              -keypass android \
+              -keystore ~/.android/debug.keystore \
+              -storepass android \
+              -dname 'CN=Android Debug,O=Android,C=US' \
+              -keyalg 'RSA' \
+              -keysize 2048 \
+              -validity 10000
+          fi
       - name: Set up local.properties
         script: |
           echo "flutter.sdk=$HOME/programs/flutter" > "$CM_BUILD_DIR/android/local.properties"
