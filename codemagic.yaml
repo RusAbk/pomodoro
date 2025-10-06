@@ -70,10 +70,13 @@ workflows:
           else
             echo "No test directory found — skipping unit tests"
           fi
-      - name: Build iOS
+      - name: Build iOS (produce unsigned .ipa)
         script: |
-          flutter build ios --release --no-codesign
+          # Produce an unsigned IPA artifact so it's downloadable as .ipa
+          flutter build ipa --release --no-codesign || flutter build ios --release --no-codesign
     artifacts:
+      # Prefer IPA artifact (if produced). Note: unsigned IPA cannot be installed on device without signing.
+      - build/ios/ipa/*.ipa
       - build/ios/iphoneos/*.app
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
