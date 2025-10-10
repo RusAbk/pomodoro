@@ -34,14 +34,14 @@ class MyApp extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
       
-      // Card Theme
-      cardTheme: CardTheme(
+      // Card Theme: use default CardTheme from Material; custom CardTheme removed to avoid SDK mismatch
+      cardTheme: CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         clipBehavior: Clip.antiAlias,
-      ) as CardThemeData?,
+      ),
       
       // Button Themes
       filledButtonTheme: FilledButtonThemeData(
@@ -109,14 +109,14 @@ class MyApp extends StatelessWidget {
         foregroundColor: Colors.white,
       ),
       
-      // Card Theme
-      cardTheme: CardTheme(
+      // Card Theme: use default CardTheme from Material; custom CardTheme removed to avoid SDK mismatch
+      cardTheme: CardThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         clipBehavior: Clip.antiAlias,
-      ) as CardThemeData?,
+      ),
       
       // Button Themes
       filledButtonTheme: FilledButtonThemeData(
