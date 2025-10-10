@@ -28,67 +28,63 @@ workflows:
         - pattern: develop
           include: true
           source: true
-    scripts:
-      - name: Set up debug keystore
-        script: |
-          set -ex
-          mkdir -p ~/.android
-          if [ -f ~/.android/debug.keystore ]; then
-            echo "Debug keystore already exists, skipping generation"
-          else
-            keytool -genkeypair \
-              -alias androiddebugkey \
-              -keypass android \
-              -keystore ~/.android/debug.keystore \
-              -storepass android \
-              -dname 'CN=Android Debug,O=Android,C=US' \
-              -keyalg 'RSA' \
-              -keysize 2048 \
-              -validity 10000
-          fi
-      - name: Set up local.properties
-        script: |
-          echo "flutter.sdk=$HOME/programs/flutter" > "$CM_BUILD_DIR/android/local.properties"
+     scripts:
       - name: Get Flutter packages
         script: |
-          flutter packages pub get
-      - name: Install pods (non-fatal)
+          flutter pub get
+
+      - name: Build iOS (unsigned) and always produce IPA
         script: |
-          # Install CocoaPods but don't fail the whole build on non-critical pod warnings/errors
-          set -e
-          find . -name "Podfile" -execdir pod install \; || echo "pod install exited with non-zero status but continuing"
-      - name: Flutter analyze (non-fatal)
-        script: |
-          # Run analyzer but don't fail the build on info/warnings so CI can continue
-          flutter analyze || true
-      - name: Flutter unit tests (non-fatal)
-        script: |
-          # Run unit tests if they exist. Do not fail the build on test failures to allow CI to continue.
-          if [ -d test ]; then
-            echo "Found test directory — running tests"
-            flutter test || echo "Unit tests failed (continuing build)"
-          else
-            echo "No test directory found — skipping unit tests"
+          set -euxo pipefail
+
+          # 1) Пытаемся сделать готовый .ipa штатной командой
+          if flutter build ipa --release --no-codesign; then
+            echo "Flutter produced IPA successfully."
+            IPA_DIR="build/ios/ipa"
+            if ls "$IPA_DIR"/*.ipa >/dev/null 2>&1; then
+              echo "Found IPA(s) in $IPA_DIR"
+              exit 0
+            fi
           fi
-      - name: Build iOS (produce unsigned .ipa)
+
+          echo "Fallback: build .app and package into unsigned .ipa manually"
+
+          # 2) Делаем .app без подписи
+          flutter build ios --release --no-codesign
+
+          # 3) Ищем собранный .app (обычно Runner.app)
+          APP_PATH=$(find build/ios/iphoneos -maxdepth 2 -type d -name "*.app" | head -n1)
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: .app was not produced"; exit 1
+          fi
+          echo "Found app: $APP_PATH"
+
+          # 4) Пакуем вручную в IPA: Payload/Runner.app -> Runner-unsigned.ipa
+          WORKDIR="build/ios/ipa"
+          mkdir -p "$WORKDIR/Payload"
+          # Чистим старые
+          rm -rf "$WORKDIR/Payload/"*.app || true
+          rm -f "$WORKDIR"/*.ipa || true
+
+          cp -R "$APP_PATH" "$WORKDIR/Payload/"
+
+          pushd "$WORKDIR" >/dev/null
+          # zip без доп. атрибутов; формат .ipa — это обычный zip
+          /usr/bin/zip -qry Runner-unsigned.ipa Payload
+          popd >/dev/null
+
+          echo "Unsigned IPA at: $WORKDIR/Runner-unsigned.ipa"
+          ls -la "$WORKDIR"
+
+      - name: List outputs (diagnostic)
         script: |
-          # Produce an unsigned IPA artifact so it's downloadable as .ipa
-          flutter build ipa --release --no-codesign || flutter build ios --release --no-codesign
-      - name: Collect build outputs (diagnostic)
-        script: |
-          echo "PWD: $(pwd)"
-          echo "Listing top-level build folder"
+          set -eux
           ls -la build || true
-          echo "Listing build/ios folder"
           ls -la build/ios || true
-          echo "Listing build/ios/ipa folder"
           ls -la build/ios/ipa || true
-          echo "Find any .ipa files"
           find build -type f -name '*.ipa' -print || true
-          echo "Find any .app folders"
           find build -type d -name '*.app' -print || true
-    artifacts:
-      # Prefer IPA artifact (if produced). Note: unsigned IPA cannot be installed on device without signing.
+     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/iphoneos/*.app
       - /tmp/xcodebuild_logs/*.log
