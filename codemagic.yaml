@@ -1,4 +1,25 @@
 workflows:
+  ios-profile-workflow:
+    name: iOS Profile (unsigned IPA)
+    instance_type: mac_mini_m1
+    environment:
+      flutter: stable
+      xcode: latest
+    scripts:
+      - name: Build profile IPA
+        script: |
+          set -euxo pipefail
+          flutter clean
+          flutter pub get
+          flutter build ios --profile --no-codesign
+          APP_PATH=$(find build/ios/iphoneos -maxdepth 2 -type d -name "*.app" | head -n1)
+          mkdir -p build/ios/ipa/Payload
+          cp -R "$APP_PATH" build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -qry Runner-profile-unsigned.ipa Payload
+    artifacts:
+      - build/ios/ipa/*.ipa
+
   ios-debug-workflow:
     name: iOS Debug (unsigned IPA)
     max_build_duration: 60
