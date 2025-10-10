@@ -1,4 +1,123 @@
 workflows:
+  ios-debug-workflow:
+    name: iOS Debug (unsigned IPA)
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      vars:
+        BUNDLE_ID: "com.yourname.pomodorotimer"
+        APP_NAME: "Pomodoro Timer"
+    cache:
+      cache_paths:
+        - $FLUTTER_ROOT/.pub-cache
+        - $HOME/.gradle/caches
+        - $HOME/Library/Caches/CocoaPods
+    triggering:
+      events:
+        - workflow_dispatch   # запуск вручную из Codemagic UI
+      branch_patterns:
+        - pattern: develop
+          include: true
+          source: true
+
+    scripts:
+      - name: Flutter prepare
+        script: |
+          set -euxo pipefail
+          flutter clean
+          flutter pub get
+
+      # debug .ipa без подписи (в приоритете)
+      - name: Build debug IPA (no codesign)
+        script: |
+          set -euxo pipefail
+
+          # 1) Пытаемся собрать готовый .ipa в debug
+          if flutter build ipa --debug --no-codesign --target-platform=ios; then
+            IPA_DIR="build/ios/ipa"
+            if ls "$IPA_DIR"/*.ipa >/dev/null 2>&1; then
+              echo "Debug IPA produced at $IPA_DIR"
+              exit 0
+            fi
+          fi
+
+          echo "Fallback: build .app (debug) and package into unsigned .ipa manually"
+
+          # 2) Собираем .app (debug) под устройство
+          flutter build ios --debug --no-codesign
+
+          # 3) Находим .app
+          APP_PATH=$(find build/ios/iphoneos -maxdepth 2 -type d -name "*.app" | head -n1)
+          if [ -z "$APP_PATH" ]; then
+            echo "ERROR: .app was not produced"; exit 1
+          fi
+          echo "Found app: $APP_PATH"
+
+          # 4) Пакуем вручную: Payload/<App>.app -> Runner-debug-unsigned.ipa
+          WORKDIR="build/ios/ipa"
+          rm -rf "$WORKDIR"
+          mkdir -p "$WORKDIR/Payload"
+          cp -R "$APP_PATH" "$WORKDIR/Payload/"
+
+          pushd "$WORKDIR" >/dev/null
+          /usr/bin/zip -qry Runner-debug-unsigned.ipa Payload
+          popd >/dev/null
+
+          echo "Unsigned Debug IPA at: $WORKDIR/Runner-debug-unsigned.ipa"
+          ls -la "$WORKDIR"
+
+      - name: Verify architectures (debug)
+        script: |
+          set -euxo pipefail
+          IPA=$(ls build/ios/ipa/*.ipa | head -n1)
+          [ -n "$IPA" ] || { echo "No IPA found"; exit 1; }
+
+          rm -rf /tmp/ipa_check_dbg
+          mkdir -p /tmp/ipa_check_dbg
+          unzip -q "$IPA" -d /tmp/ipa_check_dbg
+
+          echo "== Runner binary archs (debug) =="
+          lipo -info /tmp/ipa_check_dbg/Payload/Runner.app/Runner || true
+
+          echo "== Frameworks archs (debug) =="
+          if [ -d /tmp/ipa_check_dbg/Payload/Runner.app/Frameworks ]; then
+            find /tmp/ipa_check_dbg/Payload/Runner.app/Frameworks -name '*.framework' -maxdepth 1 -type d | while read -r FW; do
+              BIN="$FW/$(basename "$FW" .framework)"
+              if [ -f "$BIN" ]; then
+                echo ">> $(basename "$FW")"
+                lipo -info "$BIN" || true
+              fi
+            done
+          else
+            echo "No Frameworks dir"
+          fi
+
+      - name: List outputs (diagnostic)
+        script: |
+          set -eux
+          ls -la build || true
+          ls -la build/ios || true
+          ls -la build/ios/ipa || true
+          find build -type f -name '*.ipa' -print || true
+          find build -type d -name '*.app' -print || true
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/iphoneos/*.app
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+
+    publishing:
+      email:
+        recipients:
+          - your-email@example.com
+        notify:
+          success: true
+          failure: true
+          
   ios-workflow:
     name: iOS Workflow
     max_build_duration: 60
