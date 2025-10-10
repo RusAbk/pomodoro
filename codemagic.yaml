@@ -15,48 +15,28 @@ workflows:
         - $FLUTTER_ROOT/.pub-cache
         - $HOME/.gradle/caches
         - $HOME/Library/Caches/CocoaPods
-    triggering:
-      events:
-        - workflow_dispatch   # запуск вручную из Codemagic UI
-      branch_patterns:
-        - pattern: develop
-          include: true
-          source: true
 
     scripts:
-      - name: Flutter prepare
+      - name: Prepare Flutter
         script: |
           set -euxo pipefail
           flutter clean
           flutter pub get
 
-      # debug .ipa без подписи (в приоритете)
-      - name: Build debug IPA (no codesign)
+      - name: Build iOS DEBUG (.app) without codesign
         script: |
           set -euxo pipefail
-
-          # 1) Пытаемся собрать готовый .ipa в debug
-          if flutter build ipa --debug --no-codesign --target-platform=ios; then
-            IPA_DIR="build/ios/ipa"
-            if ls "$IPA_DIR"/*.ipa >/dev/null 2>&1; then
-              echo "Debug IPA produced at $IPA_DIR"
-              exit 0
-            fi
-          fi
-
-          echo "Fallback: build .app (debug) and package into unsigned .ipa manually"
-
-          # 2) Собираем .app (debug) под устройство
+          # Сборка под устройство (iphoneos), без подписи
           flutter build ios --debug --no-codesign
 
-          # 3) Находим .app
+          # Проверяем, что появился .app для iphoneos
           APP_PATH=$(find build/ios/iphoneos -maxdepth 2 -type d -name "*.app" | head -n1)
           if [ -z "$APP_PATH" ]; then
             echo "ERROR: .app was not produced"; exit 1
           fi
           echo "Found app: $APP_PATH"
 
-          # 4) Пакуем вручную: Payload/<App>.app -> Runner-debug-unsigned.ipa
+          # Пакуем .app в .ipa вручную
           WORKDIR="build/ios/ipa"
           rm -rf "$WORKDIR"
           mkdir -p "$WORKDIR/Payload"
@@ -117,7 +97,7 @@ workflows:
         notify:
           success: true
           failure: true
-          
+
   ios-workflow:
     name: iOS Workflow
     max_build_duration: 60
