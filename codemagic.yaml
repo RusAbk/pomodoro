@@ -37,8 +37,11 @@ workflows:
         script: |
           set -euxo pipefail
 
-          # 1) Пытаемся сделать готовый .ipa штатной командой
-          if flutter build ipa --release --no-codesign; then
+          flutter clean
+          flutter pub get
+
+          # ГАРАНТИРОВАННО собираем arm64 для устройства
+          if flutter build ipa --release --no-codesign --target-platform=ios; then
             echo "Flutter produced IPA successfully."
             IPA_DIR="build/ios/ipa"
             if ls "$IPA_DIR"/*.ipa >/dev/null 2>&1; then
@@ -49,27 +52,20 @@ workflows:
 
           echo "Fallback: build .app and package into unsigned .ipa manually"
 
-          # 2) Делаем .app без подписи
           flutter build ios --release --no-codesign
 
-          # 3) Ищем собранный .app (обычно Runner.app)
           APP_PATH=$(find build/ios/iphoneos -maxdepth 2 -type d -name "*.app" | head -n1)
           if [ -z "$APP_PATH" ]; then
             echo "ERROR: .app was not produced"; exit 1
           fi
           echo "Found app: $APP_PATH"
 
-          # 4) Пакуем вручную в IPA: Payload/Runner.app -> Runner-unsigned.ipa
           WORKDIR="build/ios/ipa"
+          rm -rf "$WORKDIR"
           mkdir -p "$WORKDIR/Payload"
-          # Чистим старые
-          rm -rf "$WORKDIR/Payload/"*.app || true
-          rm -f "$WORKDIR"/*.ipa || true
-
           cp -R "$APP_PATH" "$WORKDIR/Payload/"
 
           pushd "$WORKDIR" >/dev/null
-          # zip без доп. атрибутов; формат .ipa — это обычный zip
           /usr/bin/zip -qry Runner-unsigned.ipa Payload
           popd >/dev/null
 
@@ -84,6 +80,32 @@ workflows:
           ls -la build/ios/ipa || true
           find build -type f -name '*.ipa' -print || true
           find build -type d -name '*.app' -print || true
+
+      - name: Verify architectures in IPA
+        script: |
+          set -euxo pipefail
+          IPA=$(ls build/ios/ipa/*.ipa | head -n1)
+          [ -n "$IPA" ] || { echo "No IPA found"; exit 1; }
+
+          rm -rf /tmp/ipa_check
+          mkdir -p /tmp/ipa_check
+          unzip -q "$IPA" -d /tmp/ipa_check
+
+          echo "== Runner binary archs =="
+          lipo -info /tmp/ipa_check/Payload/Runner.app/Runner
+
+          echo "== Frameworks archs =="
+          if [ -d /tmp/ipa_check/Payload/Runner.app/Frameworks ]; then
+            find /tmp/ipa_check/Payload/Runner.app/Frameworks -name '*.framework' -maxdepth 1 -type d | while read -r FW; do
+              BIN="$FW/$(basename "$FW" .framework)"
+              if [ -f "$BIN" ]; then
+                echo ">> $(basename "$FW")"
+                lipo -info "$BIN" || true
+              fi
+            done
+          else
+            echo "No Frameworks dir"
+          fi
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/iphoneos/*.app
